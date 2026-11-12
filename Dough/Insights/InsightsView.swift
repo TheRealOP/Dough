@@ -156,9 +156,9 @@ struct InsightsView: View {
         var previous: [SpendingRecord] = []
         for receipt in receipts {
             let date = receipt.date
-            if date >= thisMonth.start && date < thisMonth.end {
+            if (thisMonth.start..<thisMonth.end).contains(date) {
                 current.append(receipt.record)
-            } else if date >= lastMonth.start && date < lastMonth.end {
+            } else if (lastMonth.start..<lastMonth.end).contains(date) {
                 previous.append(receipt.record)
             }
         }

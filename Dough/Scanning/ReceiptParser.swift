@@ -278,9 +278,9 @@ enum ReceiptParser {
         guard let date = calendar.date(from: DateComponents(year: year, month: month, day: day)) else { return nil }
         let check = calendar.dateComponents([.year, .month, .day], from: date)
         guard check.year == year, check.month == month, check.day == day else { return nil }
-        guard date <= now.addingTimeInterval(86_400),
-              let oldest = calendar.date(byAdding: .year, value: -10, to: now),
-              date >= oldest else { return nil }
+        // Range checks, not `<=`/`>=`: the iOS 27 SDK links Date's own `<=`/`>=`, which crash on older iOS.
+        guard let oldest = calendar.date(byAdding: .year, value: -10, to: now),
+              (oldest...now.addingTimeInterval(86_400)).contains(date) else { return nil }
         return date
     }
 }
