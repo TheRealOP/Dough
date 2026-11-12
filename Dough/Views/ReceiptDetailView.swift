@@ -14,6 +14,15 @@ struct ReceiptDetailView: View {
     }
 
     var body: some View {
+        // The receipt can be deleted while this screen is still on the stack.
+        if receipt.isDeleted || receipt.modelContext == nil {
+            ContentUnavailableView("Receipt Deleted", systemImage: "trash")
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         List {
             Section {
                 VStack(alignment: .leading, spacing: 4) {

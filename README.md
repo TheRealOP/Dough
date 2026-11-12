@@ -44,9 +44,9 @@ Tests use Swift Testing and run with ⌘U.
 
 | Path | Contents |
 | --- | --- |
-| `Dough/Models.swift` | SwiftData models (`Receipt`, `LineItem`), categories, money helpers, budget settings keys |
-| `Dough/Scanning/` | Camera/photo capture, OCR, receipt parsing |
-| `Dough/Views/` | Home, receipt list, review/edit and settings screens |
+| `Dough/Models.swift` | SwiftData models (`Receipt`, `LineItem`), `ReceiptDraft`, `SpendingRecord`, categories, money helpers, budget settings keys |
+| `Dough/Scanning/` | Document camera, OCR, receipt parsing, categories, on-device AI reading |
+| `Dough/Views/` | Home, receipt list/detail, add-receipt flow (camera/photos/manual), review/edit, settings |
 | `Dough/Insights/` | `InsightsEngine`, `SpendingAnalyst` (on-device model) and `InsightsView` |
 | `DoughTests/` | Unit tests (Swift Testing) |
 

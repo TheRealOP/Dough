@@ -24,6 +24,11 @@ enum ReceiptParser {
 
     private static let taxWords: Set<String> = ["tax", "hst", "gst", "pst", "vat", "mwst", "iva", "tva"]
     private static let totalWords: Set<String> = ["total", "summe", "gesamt"]
+    /// A "total" on one of these lines is how the customer paid, not what the receipt cost.
+    private static let tenderWords: Set<String> = [
+        "tender", "tendered", "cash", "change", "visa", "mastercard", "amex", "discover", "debit", "credit",
+        "payment", "paid",
+    ]
     private static let savingsWords: Set<String> = ["savings", "saved", "points"]
     private static let ignoreWords: Set<String> = [
         "change", "cash", "visa", "mastercard", "amex", "discover", "debit", "credit", "tender", "tendered",
@@ -46,7 +51,10 @@ enum ReceiptParser {
 
         var totals: [Decimal] = []
         var taxes: [Decimal] = []
+        var totalTax: Decimal?
         var reachedTotals = false
+        // A product name printed on its own line, waiting for a "2 @ 0.99" line below it.
+        var pendingName: String?
 
         for line in lines {
             let trailing = trailingAmount(in: line)
@@ -71,14 +79,15 @@ enum ReceiptParser {
             }
             if words.contains(where: { taxWords.contains($0) }) {
                 if let amount {
-                    taxes.append(amount)
+                    // "TOTAL TAX" repeats the individual tax lines, so it replaces their sum.
+                    if words.contains("total") { totalTax = amount } else { taxes.append(amount) }
                     reachedTotals = true
                 }
                 continue
             }
             if words.contains(where: { totalWords.contains($0) })
                 || phrase.contains(" amount due ") || phrase.contains(" balance due ") {
-                if let amount {
+                if let amount, !words.contains(where: { tenderWords.contains($0) }) {
                     totals.append(amount)
                     reachedTotals = true
                 }
@@ -86,15 +95,27 @@ enum ReceiptParser {
             }
             if words.contains(where: { ignoreWords.contains($0) }) { continue }
             if reachedTotals { continue }
-            guard let found = trailing else { continue }
-
-            if let multiple = quantityLine(line), !receipt.items.isEmpty {
-                let index = receipt.items.count - 1
-                receipt.items[index].quantity = Double(multiple.count)
-                receipt.items[index].price = multiple.lineTotal
-                    ?? (Decimal(multiple.count) * multiple.unit).rounded(2)
+            guard let found = trailing else {
+                pendingName = itemName(in: line, nameEnd: line.endIndex)?.name
                 continue
             }
+
+            if let multiple = quantityLine(line) {
+                let price = multiple.lineTotal ?? (Decimal(multiple.count) * multiple.unit).rounded(2)
+                if let name = pendingName {
+                    receipt.items.append(ParsedItem(
+                        name: name, quantity: Double(multiple.count), price: price,
+                        category: Categorizer.category(forItem: name, merchant: receipt.merchant)
+                    ))
+                } else if !receipt.items.isEmpty {
+                    let index = receipt.items.count - 1
+                    receipt.items[index].quantity = Double(multiple.count)
+                    receipt.items[index].price = price
+                }
+                pendingName = nil
+                continue
+            }
+            pendingName = nil
 
             guard let parsed = itemName(in: line, nameEnd: found.start) else { continue }
             let category: SpendingCategory
@@ -108,14 +129,14 @@ enum ReceiptParser {
             )
         }
 
-        receipt.tax = taxes.isEmpty ? nil : taxes.reduce(Decimal(0), +)
+        receipt.tax = totalTax ?? (taxes.isEmpty ? nil : taxes.reduce(Decimal(0), +))
         if let maxTotal = totals.max() {
             receipt.total = maxTotal
             receipt.totalIsExplicit = true
         } else if let subtotal = receipt.subtotal {
             receipt.total = subtotal + (receipt.tax ?? 0)
         } else if !receipt.items.isEmpty {
-            receipt.total = receipt.items.reduce(Decimal(0)) { $0 + $1.price }
+            receipt.total = receipt.items.reduce(Decimal(0)) { $0 + $1.price } + (receipt.tax ?? 0)
         }
         return receipt
     }

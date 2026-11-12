@@ -7,6 +7,7 @@ struct ReceiptScanner: ViewModifier {
     @Binding var isPresented: Bool
     @State private var showCamera = false
     @State private var showPhotos = false
+    @State private var scannedImages: [UIImage]?
     @State private var photoItem: PhotosPickerItem?
     @State private var isProcessing = false
     @State private var draft: ReceiptDraft?
@@ -20,11 +21,16 @@ struct ReceiptScanner: ViewModifier {
                 Button("Choose from Photos") { showPhotos = true }
                 Button("Enter Manually") { draft = ReceiptDraft() }
             }
-            .fullScreenCover(isPresented: $showCamera) {
+            // Reading starts once the camera has closed, so the review sheet isn't presented over it.
+            .fullScreenCover(isPresented: $showCamera, onDismiss: {
+                guard let images = scannedImages else { return }
+                scannedImages = nil
+                Task { await read(images) }
+            }) {
                 DocumentScannerView(
                     onScan: { images in
+                        scannedImages = images
                         showCamera = false
-                        Task { await read(images) }
                     },
                     onCancel: { showCamera = false }
                 )
@@ -41,6 +47,9 @@ struct ReceiptScanner: ViewModifier {
                         await read([image])
                     } else {
                         isProcessing = false
+                        var empty = ReceiptDraft()
+                        empty.notice = "Couldn't load that photo. Enter the details below or pick another one."
+                        draft = empty
                     }
                 }
             }

@@ -138,6 +138,10 @@ struct ReceiptReviewView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { endEditing() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: save)
                         .disabled(draft.total == 0 && draft.items.isEmpty)
@@ -169,6 +173,7 @@ struct ReceiptReviewView: View {
     }
 
     private func save() {
+        endEditing()
         let receipt: Receipt
         if let existing {
             receipt = existing
@@ -179,4 +184,10 @@ struct ReceiptReviewView: View {
         draft.apply(to: receipt, in: modelContext)
         dismiss()
     }
+}
+
+/// Ends text editing so number fields write their value back (the decimal pad has no return key).
+@MainActor
+func endEditing() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }

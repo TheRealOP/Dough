@@ -150,3 +150,53 @@ struct ReceiptParserTests {
         #expect(Categorizer.matches("Toilet Paper 12pk", keywords: ["toilet paper"]))
     }
 }
+
+struct ReceiptParserTotalsTests {
+    private func money(_ text: String) -> Decimal {
+        Decimal(string: text)!
+    }
+
+    @Test func tenderedAmountIsNotTheTotal() {
+        let receipt = ReceiptParser.parse(lines: [
+            "CORNER MARKET",
+            "MILK 4.00",
+            "TOTAL 4.00",
+            "TOTAL TENDERED 20.00",
+            "CHANGE 16.00",
+        ])
+        #expect(receipt.total == money("4.00"))
+    }
+
+    @Test func totalTaxLineIsNotAddedToTaxLines() {
+        let receipt = ReceiptParser.parse(lines: [
+            "CORNER MARKET",
+            "MILK 4.00",
+            "TAX 0.30",
+            "TOTAL TAX 0.30",
+            "TOTAL 4.30",
+        ])
+        #expect(receipt.tax == money("0.30"))
+    }
+
+    @Test func fallbackTotalIncludesTax() {
+        let receipt = ReceiptParser.parse(lines: [
+            "CORNER MARKET",
+            "MILK 4.00",
+            "TAX 0.30",
+        ])
+        #expect(receipt.total == money("4.30"))
+        #expect(!receipt.totalIsExplicit)
+    }
+
+    @Test func quantityLineUsesTheNameAboveIt() {
+        let receipt = ReceiptParser.parse(lines: [
+            "CORNER MARKET",
+            "MILK 4.00",
+            "BANANAS",
+            "2 @ 0.99 1.98",
+        ])
+        #expect(receipt.items.map(\.name) == ["Milk", "Bananas"])
+        #expect(receipt.items.map(\.quantity) == [1, 2])
+        #expect(receipt.items.map(\.price) == [money("4.00"), money("1.98")])
+    }
+}

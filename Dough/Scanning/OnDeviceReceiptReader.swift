@@ -79,7 +79,7 @@ enum FoundationModelsReceiptReader {
         let session = LanguageModelSession(
             instructions: "You extract structured data from receipt text produced by OCR. The text may contain recognition errors. Only report values that appear on the receipt."
         )
-        let prompt = "Receipt text:\n\n" + String(ocrText.prefix(6000))
+        let prompt = "Receipt text:\n\n" + String(ocrText.prefix(4000))
         let generated = try await session.respond(
             to: prompt,
             generating: GeneratedReceipt.self,

@@ -52,6 +52,12 @@ struct SettingsView: View {
                 #endif
             }
             .navigationTitle("Settings")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { endEditing() }
+                }
+            }
             .confirmationDialog(
                 "Delete all \(receipts.count) receipts?",
                 isPresented: $confirmDeleteAll,
