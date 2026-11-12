@@ -80,11 +80,16 @@ extension Decimal {
     }
 }
 
-/// `@AppStorage` keys for the optional monthly budget.
-/// `enabledKey` stores a `Bool` (default false), `amountKey` a `Double` (default 0).
+/// `@AppStorage` keys for the optional budget: a bucket that begins with a starting amount,
+/// gets the monthly amount added every month, and has every receipt subtracted.
+/// `enabledKey` stores a `Bool` (default false); `amountKey` (added each month) and `startingKey`
+/// a `Double` (default 0); `startKey` when the budget was turned on, as
+/// `timeIntervalSinceReferenceDate` (0 = not recorded, treated as now).
 enum BudgetSettings {
     static let enabledKey = "budget.enabled"
     static let amountKey = "budget.amount"
+    static let startingKey = "budget.starting"
+    static let startKey = "budget.start"
 }
 
 // MARK: - Persistent models

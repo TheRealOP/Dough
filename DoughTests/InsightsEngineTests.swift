@@ -23,6 +23,28 @@ struct InsightsEngineTests {
         )
     }
 
+    @Test func budgetBalanceAddsMonthlyAndSubtractsReceipts() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        func day(_ month: Int, _ day: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: month, day: day))!
+        }
+        // Started mid-September with 500, 100 a month: September, October and November top-ups by November.
+        let balance = InsightsEngine.budgetBalance(
+            starting: 500,
+            monthly: 100,
+            start: day(9, 15),
+            now: day(11, 12),
+            spending: [
+                (day(8, 30), 999),  // before the starting month: ignored
+                (day(9, 1), 40),    // same month as the start: counted
+                (day(11, 5), 60),
+            ],
+            calendar: calendar
+        )
+        #expect(balance == 700)
+    }
+
     @Test func categoryTotalsSplitTaxProportionally() {
         // Items sum to 10.00; total 10.80 includes 8% tax.
         let receipt = record(total: "10.80", items: [

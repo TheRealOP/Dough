@@ -8,6 +8,8 @@ struct SettingsView: View {
     @Query(sort: \Receipt.date) private var receipts: [Receipt]
     @AppStorage(BudgetSettings.enabledKey) private var budgetEnabled = false
     @AppStorage(BudgetSettings.amountKey) private var budgetAmount = 0.0
+    @AppStorage(BudgetSettings.startingKey) private var budgetStarting = 0.0
+    @AppStorage(BudgetSettings.startKey) private var budgetStart = 0.0
     @State private var confirmDeleteAll = false
 
     var body: some View {
@@ -15,8 +17,16 @@ struct SettingsView: View {
             Form {
                 Section {
                     Toggle("Monthly budget", isOn: $budgetEnabled)
+                        .onChange(of: budgetEnabled) { _, isOn in
+                            if isOn { budgetStart = Date.now.timeIntervalSinceReferenceDate }
+                        }
                     if budgetEnabled {
-                        LabeledContent("Amount") {
+                        LabeledContent("Starting amount") {
+                            TextField("Amount", value: $budgetStarting, format: .number)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        LabeledContent("Added each month") {
                             TextField("Amount", value: $budgetAmount, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
@@ -25,7 +35,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Budget")
                 } footer: {
-                    Text("Optional. Each receipt is subtracted from this amount every month.")
+                    Text("Optional. You begin with the starting amount, the monthly amount is added every month, and each receipt is subtracted. Turn it off and on to start over.")
                 }
 
                 Section {

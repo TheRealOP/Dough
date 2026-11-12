@@ -5,6 +5,8 @@ struct DashboardView: View {
     @Query(sort: \Receipt.date, order: .reverse) private var receipts: [Receipt]
     @AppStorage(BudgetSettings.enabledKey) private var budgetEnabled = false
     @AppStorage(BudgetSettings.amountKey) private var budgetAmount = 0.0
+    @AppStorage(BudgetSettings.startingKey) private var budgetStarting = 0.0
+    @AppStorage(BudgetSettings.startKey) private var budgetStart = 0.0
     @State private var showScanner = false
 
     private var spent: Decimal {
@@ -13,9 +15,15 @@ struct DashboardView: View {
             .reduce(0) { $0 + $1.total }
     }
 
+    /// What was available at the start of this month: the bucket balance with this month's spending added back.
     private var budget: Decimal? {
-        guard budgetEnabled, budgetAmount > 0 else { return nil }
-        return Money.decimal(budgetAmount)
+        guard budgetEnabled, budgetAmount > 0 || budgetStarting > 0 else { return nil }
+        return InsightsEngine.budgetBalance(
+            starting: Money.decimal(budgetStarting),
+            monthly: Money.decimal(budgetAmount),
+            start: budgetStart > 0 ? Date(timeIntervalSinceReferenceDate: budgetStart) : .now,
+            spending: receipts.map { ($0.date, $0.total) }
+        ) + spent
     }
 
     var body: some View {
@@ -63,7 +71,7 @@ struct DashboardView: View {
                 .font(.headline)
 
             if let budget {
-                let used = Money.double(spent / budget)
+                let used = budget > 0 ? Money.double(spent / budget) : 2
                 let progress = min(max(used, 0), 1)
                 let remaining = budget - spent
                 let color: Color = used > 1 ? .red : (used > 0.8 ? .orange : .green)

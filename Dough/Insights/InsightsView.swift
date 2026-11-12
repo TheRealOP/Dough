@@ -7,6 +7,8 @@ struct InsightsView: View {
     @Query(sort: \Receipt.date, order: .reverse) private var receipts: [Receipt]
     @AppStorage(BudgetSettings.enabledKey) private var budgetEnabled = false
     @AppStorage(BudgetSettings.amountKey) private var budgetAmount = 0.0
+    @AppStorage(BudgetSettings.startingKey) private var budgetStarting = 0.0
+    @AppStorage(BudgetSettings.startKey) private var budgetStart = 0.0
     @State private var analyst = SpendingAnalyst()
     @State private var question = ""
 
@@ -134,7 +136,14 @@ struct InsightsView: View {
     }
 
     private func ask(_ question: String?, current: [SpendingRecord], previous: [SpendingRecord]) {
-        let budget: Decimal? = budgetEnabled && budgetAmount > 0 ? Money.decimal(budgetAmount) : nil
+        let budget: Decimal? = budgetEnabled && (budgetAmount > 0 || budgetStarting > 0)
+            ? InsightsEngine.budgetBalance(
+            starting: Money.decimal(budgetStarting),
+            monthly: Money.decimal(budgetAmount),
+            start: budgetStart > 0 ? Date(timeIntervalSinceReferenceDate: budgetStart) : .now,
+            spending: receipts.map { ($0.date, $0.total) }
+        ) + current.reduce(Decimal(0)) { $0 + $1.total }
+            : nil
         let context = InsightsEngine.aiContext(
             current: current,
             previous: previous,

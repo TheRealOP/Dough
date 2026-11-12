@@ -58,6 +58,24 @@ enum InsightsEngine {
         return Array(sorted.prefix(max(limit, 0)))
     }
 
+    /// Money left in the budget bucket: `starting`, plus `monthly` for every month from the one
+    /// containing `start` through the one containing `now`, minus all spending since the
+    /// beginning of `start`'s month.
+    static func budgetBalance(
+        starting: Decimal,
+        monthly: Decimal,
+        start: Date,
+        now: Date = .now,
+        spending: [(date: Date, total: Decimal)],
+        calendar: Calendar = .current
+    ) -> Decimal {
+        guard let first = calendar.dateInterval(of: .month, for: start)?.start,
+              let current = calendar.dateInterval(of: .month, for: now)?.start else { return starting + monthly }
+        let months = max(0, calendar.dateComponents([.month], from: first, to: current).month ?? 0) + 1
+        let spent = spending.filter { (first...).contains($0.date) }.reduce(Decimal(0)) { $0 + $1.total }
+        return starting + monthly * Decimal(months) - spent
+    }
+
     /// Compact plain-text briefing for the on-device language model.
     static func aiContext(current: [SpendingRecord], previous: [SpendingRecord], periodName: String, budget: Decimal?) -> String {
         let spent = current.reduce(Decimal(0)) { $0 + $1.total }
@@ -70,9 +88,9 @@ enum InsightsEngine {
         if let budget {
             let remaining = budget - spent
             if remaining >= 0 {
-                lines.append("Monthly budget: \(budget.currencyText), remaining \(remaining.currencyText)")
+                lines.append("Budget this month: \(budget.currencyText), remaining \(remaining.currencyText)")
             } else {
-                lines.append("Monthly budget: \(budget.currencyText), over by \((spent - budget).currencyText)")
+                lines.append("Budget this month: \(budget.currencyText), over by \((spent - budget).currencyText)")
             }
         }
 
